@@ -1,31 +1,9 @@
-
-import { BarChart3, Link2, ShieldCheck } from "lucide-react";
-
-const features = [
-  {
-    icon: Link2,
-    title: "Easy Link Shortening",
-    description:
-      "Turn long URLs into clean, shareable short links in seconds.",
-  },
-  {
-    icon: BarChart3,
-    title: "Actionable Analytics",
-    description:
-      "Understand click activity and learn how your links perform.",
-  },
-  {
-    icon: ShieldCheck,
-    title: "Reliable Link Management",
-    description:
-      "Keep your links organized and access them from one place.",
-  },
-];
+import { features } from "@/data/features";
 
 export default function Features() {
   return (
     <section id="features" className="container-main py-24">
-      <div className="mx-auto max-w-2xl text-center">
+      <div className="mx-auto max-w-2xl text-center" data-aos="fade-up" suppressHydrationWarning>
         <p className="text-sm font-semibold text-violet-400">
           FEATURES
         </p>
@@ -40,7 +18,8 @@ export default function Features() {
         </p>
       </div>
 
-      <div className="mt-14 grid gap-5 md:grid-cols-3">
+      <div className="mt-14 grid gap-5 md:grid-cols-3" data-aos="fade-up"
+        data-aos-delay="100" suppressHydrationWarning>
         {features.map((feature) => {
           const Icon = feature.icon;
 
