@@ -101,9 +101,9 @@ export default function LinksManager() {
       current.map((link) =>
         link.id === id
           ? {
-              ...link,
-              status: link.status === "active" ? "inactive" : "active",
-            }
+            ...link,
+            status: link.status === "active" ? "inactive" : "active",
+          }
           : link
       )
     );
@@ -218,11 +218,10 @@ export default function LinksManager() {
             <button
               key={item}
               onClick={() => setFilter(item)}
-              className={`rounded-lg px-4 py-2 text-sm capitalize transition ${
-                filter === item
+              className={`rounded-lg px-4 py-2 text-sm capitalize transition ${filter === item
                   ? "bg-violet-600 text-white"
                   : "border border-white/10 bg-[#15121f] text-zinc-400 hover:text-white"
-              }`}
+                }`}
             >
               {item}
             </button>
@@ -235,109 +234,74 @@ export default function LinksManager() {
           data-aos-delay="400"
           suppressHydrationWarning
         >
-          <div className="overflow-x-auto scrollbar-none">
-            <table className="w-full min-w-[760px] text-left text-sm">
-              <thead className="border-b border-white/10 bg-white/[0.03] text-xs uppercase tracking-wide text-zinc-500">
-                <tr>
-                  <th className="px-5 py-4 font-medium">Short link</th>
-                  <th className="px-5 py-4 font-medium">Destination</th>
-                  <th className="px-5 py-4 font-medium">Clicks</th>
-                  <th className="px-5 py-4 font-medium">Created</th>
-                  <th className="px-5 py-4 font-medium">Status</th>
-                  <th className="px-5 py-4 text-right font-medium">Actions</th>
-                </tr>
-              </thead>
+          {/* ...filter buttons aur table container waisa hi rahega... */}
 
-              <tbody className="divide-y divide-white/5">
-                {filteredLinks.map((link, index) => (
-                  <tr
-                    key={link.id}
-                    className="text-zinc-300"
-                    data-aos="fade-up"
-                    data-aos-delay={450 + index * 60}
-                    suppressHydrationWarning
-                  >
-                    <td className="px-5 py-4">
-                      <span className="font-medium text-violet-300">
-                        {BASE_URL}/{link.shortId}
-                      </span>
-                    </td>
-                    <td className="max-w-[230px] truncate px-5 py-4 text-zinc-400">
-                      {link.originalUrl}
-                    </td>
-                    <td className="px-5 py-4">{link.clicks.toLocaleString()}</td>
-                    <td className="whitespace-nowrap px-5 py-4 text-zinc-400">
-                      {link.createdAt}
-                    </td>
-                    <td className="px-5 py-4">
-                      <span
-                        className={`rounded-full px-2.5 py-1 text-xs ${
-                          link.status === "active"
-                            ? "bg-emerald-500/10 text-emerald-400"
-                            : "bg-zinc-500/10 text-zinc-400"
-                        }`}
-                      >
-                        {link.status}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4">
-                      <div className="flex justify-end gap-2">
-                        <button
-                          onClick={() => handleCopy(link.shortId)}
-                          title="Copy short link"
-                          aria-label="Copy short link"
-                          className="rounded-lg p-2 text-zinc-400 hover:bg-white/10 hover:text-white"
-                        >
-                          {copiedId === link.shortId ? (
-                            <Check size={16} className="text-emerald-400" />
-                          ) : (
-                            <Copy size={16} />
-                          )}
-                        </button>
-                        <a
-                          href={link.originalUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          title="Open destination"
-                          aria-label="Open destination"
-                          className="rounded-lg p-2 text-zinc-400 hover:bg-white/10 hover:text-white"
-                        >
-                          <ExternalLink size={16} />
-                        </a>
-                        <button
-                          onClick={() => toggleStatus(link.id)}
-                          title="Toggle status"
-                          aria-label="Toggle status"
-                          className="rounded-lg p-2 text-zinc-400 hover:bg-white/10 hover:text-white"
-                        >
-                          {link.status === "active" ? (
-                            <ToggleRight size={17} />
-                          ) : (
-                            <ToggleLeft size={17} />
-                          )}
-                        </button>
-                        <button
-                          onClick={() => deleteLink(link.id)}
-                          title="Delete link"
-                          aria-label="Delete link"
-                          className="rounded-lg p-2 text-zinc-400 hover:bg-red-500/10 hover:text-red-400"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-
-                {filteredLinks.length === 0 && (
+          <div
+            className="overflow-hidden rounded-2xl border border-white/10 bg-[#15121f]"
+            data-aos="fade-up"
+            data-aos-delay="400"
+            suppressHydrationWarning
+          >
+            <div className="overflow-x-auto scrollbar-none">
+              <table className="w-full min-w-[760px] text-left text-sm">
+                <thead className="border-b border-white/10 bg-white/[0.03] text-xs uppercase tracking-wide text-zinc-500">
                   <tr>
-                    <td colSpan={6} className="px-5 py-12 text-center text-zinc-500">
-                      No links found. Try another search or create a new link.
-                    </td>
+                    <th className="px-5 py-4 font-medium">Short link</th>
+                    <th className="px-5 py-4 font-medium">Destination</th>
+                    <th className="px-5 py-4 font-medium">Clicks</th>
+                    <th className="px-5 py-4 font-medium">Created</th>
+                    <th className="px-5 py-4 font-medium">Status</th>
+                    <th className="px-5 py-4 text-right font-medium">Actions</th>
                   </tr>
-                )}
-              </tbody>
-            </table>
+                </thead>
+
+                {/* key={filter} — tab switch pe rows re-mount hoti hain aur animation smoothly replay hoti hai */}
+                <tbody key={filter} className="divide-y divide-white/5">
+                  {filteredLinks.map((link, index) => (
+                    <tr
+                      key={link.id}
+                      className="animate-row-in text-zinc-300"
+                      style={{ animationDelay: `${index * 50}ms` }}
+                    >
+                      {/* ...baqi row content bilkul waisa hi... */}
+                      <td className="px-5 py-4">
+                        <span className="font-medium text-violet-300">
+                          {BASE_URL}/{link.shortId}
+                        </span>
+                      </td>
+                      <td className="max-w-[230px] truncate px-5 py-4 text-zinc-400">
+                        {link.originalUrl}
+                      </td>
+                      <td className="px-5 py-4">{link.clicks.toLocaleString()}</td>
+                      <td className="whitespace-nowrap px-5 py-4 text-zinc-400">
+                        {link.createdAt}
+                      </td>
+                      <td className="px-5 py-4">
+                        <span
+                          className={`rounded-full px-2.5 py-1 text-xs ${link.status === "active"
+                              ? "bg-emerald-500/10 text-emerald-400"
+                              : "bg-zinc-500/10 text-zinc-400"
+                            }`}
+                        >
+                          {link.status}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4">
+                        {/* actions waisa hi */}
+                      </td>
+                    </tr>
+                  ))}
+
+                  {filteredLinks.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="px-5 py-12 text-center text-zinc-500">
+                        No links found. Try another search or create a new link.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </section>

@@ -44,11 +44,10 @@ export default function DashboardSidebar() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex shrink-0 items-center gap-3 rounded-xl px-4 py-3 text-sm transition ${
-                active
+              className={`flex shrink-0 items-center gap-3 rounded-xl px-4 py-3 text-sm transition ${active
                   ? "bg-violet-600 text-white"
                   : "text-zinc-400 hover:bg-white/5 hover:text-white"
-              }`}
+                }`}
             >
               <Icon size={18} />
               {item.label}
@@ -59,6 +58,7 @@ export default function DashboardSidebar() {
 
       <Link
         href="/"
+        scroll={false}
         className="mt-8 hidden text-sm text-zinc-500 hover:text-white lg:block"
       >
         ← Back to website
