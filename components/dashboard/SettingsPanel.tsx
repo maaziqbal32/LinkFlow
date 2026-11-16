@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Bell, LockKeyhole, Save, UserRound } from "lucide-react";
+import AOS from "aos";
 
 export default function SettingsPanel() {
   const [name, setName] = useState("Maaz Iqbal");
@@ -11,6 +12,18 @@ export default function SettingsPanel() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [message, setMessage] = useState("");
+
+  // Fix AOS not showing on direct load / tab switch
+  useEffect(() => {
+    const timers = [
+      setTimeout(() => AOS.refreshHard(), 50),
+      setTimeout(() => AOS.refreshHard(), 200),
+      setTimeout(() => AOS.refreshHard(), 500),
+      setTimeout(() => AOS.refreshHard(), 900),
+    ];
+
+    return () => timers.forEach(clearTimeout);
+  }, []);
 
   function saveProfile(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -152,12 +165,7 @@ export default function SettingsPanel() {
         </div>
 
         <div className="max-w-2xl divide-y divide-white/5">
-          <label
-            className="flex cursor-pointer items-center justify-between gap-4 py-4"
-            data-aos="fade-up"
-            data-aos-delay="350"
-            suppressHydrationWarning
-          >
+          <label className="flex cursor-pointer items-center justify-between gap-4 py-4">
             <span>
               <span className="block text-sm font-medium text-white">Product updates</span>
               <span className="mt-1 block text-xs text-zinc-500">
@@ -172,12 +180,7 @@ export default function SettingsPanel() {
             />
           </label>
 
-          <label
-            className="flex cursor-pointer items-center justify-between gap-4 py-4"
-            data-aos="fade-up"
-            data-aos-delay="400"
-            suppressHydrationWarning
-          >
+          <label className="flex cursor-pointer items-center justify-between gap-4 py-4">
             <span>
               <span className="block text-sm font-medium text-white">Weekly reports</span>
               <span className="mt-1 block text-xs text-zinc-500">
@@ -197,9 +200,6 @@ export default function SettingsPanel() {
       {/* Password section */}
       <section
         className="rounded-2xl border border-white/10 bg-[#15121f] p-5 sm:p-6"
-        data-aos="fade-up"
-        data-aos-delay="300"
-        suppressHydrationWarning
       >
         <div className="mb-6 flex items-center gap-3">
           <div className="rounded-xl bg-violet-500/15 p-3 text-violet-400">
@@ -212,12 +212,7 @@ export default function SettingsPanel() {
         </div>
 
         <form onSubmit={updatePassword} className="max-w-2xl space-y-5">
-          <div
-            className="space-y-2"
-            data-aos="fade-up"
-            data-aos-delay="400"
-            suppressHydrationWarning
-          >
+          <div className="space-y-2">
             <label htmlFor="current-password" className="text-sm text-zinc-300">
               Current password
             </label>
@@ -231,12 +226,7 @@ export default function SettingsPanel() {
             />
           </div>
 
-          <div
-            className="space-y-2"
-            data-aos="fade-up"
-            data-aos-delay="450"
-            suppressHydrationWarning
-          >
+          <div className="space-y-2">
             <label htmlFor="new-password" className="text-sm text-zinc-300">
               New password
             </label>
@@ -252,11 +242,7 @@ export default function SettingsPanel() {
             <p className="text-xs text-zinc-500">Use at least 8 characters.</p>
           </div>
 
-          <div
-            data-aos="fade-up"
-            data-aos-delay="500"
-            suppressHydrationWarning
-          >
+          <div>
             <button
               type="submit"
               className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/5"

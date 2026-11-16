@@ -147,9 +147,6 @@ export default function AnalyticsOverview() {
       {/* Insights */}
       <section
         className="rounded-2xl border border-white/10 bg-[#15121f] p-5 sm:p-6"
-        data-aos="fade-up"
-        data-aos-delay="400"
-        suppressHydrationWarning
       >
         <div className="mb-5 flex items-center gap-2">
           <MousePointerClick size={18} className="text-violet-400" />
@@ -157,20 +154,14 @@ export default function AnalyticsOverview() {
         </div>
         <div className="grid gap-4 md:grid-cols-2">
           <div
-            className="rounded-xl bg-white/[0.03] p-4"
-            data-aos="fade-up"
-            data-aos-delay="500"
-            suppressHydrationWarning
+            className="rounded-xl bg-white/3 p-4"
           >
             <p className="text-sm text-zinc-400">Top performing period</p>
             <p className="mt-2 text-xl font-semibold text-white">Saturday</p>
             <p className="mt-1 text-xs text-zinc-500">Based on sample weekly activity</p>
           </div>
           <div
-            className="rounded-xl bg-white/[0.03] p-4"
-            data-aos="fade-up"
-            data-aos-delay="600"
-            suppressHydrationWarning
+            className="rounded-xl bg-white/3 p-4"
           >
             <p className="text-sm text-zinc-400">Engagement trend</p>
             <p className="mt-2 flex items-center gap-2 text-xl font-semibold text-emerald-400">
