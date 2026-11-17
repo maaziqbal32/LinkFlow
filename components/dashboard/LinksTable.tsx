@@ -83,7 +83,7 @@ export default function LinksTable({
                   </span>
                 </td>
 
-                <td className="max-w-[230px] truncate px-5 py-4 text-zinc-400">
+                <td className="max-w-57.5 truncate px-5 py-4 text-zinc-400">
                   {link.originalUrl}
                 </td>
 
@@ -146,7 +146,7 @@ export default function LinksTable({
 
                     <button
                       type="button"
-                      onClick={() => onDelete(link.id)}
+                      onClick={() => onDelete(link.shortId)}
                       title="Delete link"
                       aria-label="Delete link"
                       className="rounded-lg p-2 text-zinc-400 transition hover:bg-red-500/10 hover:text-red-400"

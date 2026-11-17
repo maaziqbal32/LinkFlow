@@ -1,23 +1,108 @@
+
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import type { ShortLink } from "@/types/dashboard";
-import { recentLinks } from "@/data/dashboard";
 import CreateLinkForm from "./CreateLinkForm";
 import LinksTable from "./LinksTable";
 import AOS from "aos";
 
+import {
+  getAllURLs,
+  createShortURL,
+  deleteShortURL,
+  type BackendURL,
+} from "@/lib/api";
+
 type Filter = "all" | "active" | "inactive";
 
+// Convert backend URL data into frontend ShortLink format
+const mapBackendURL = (url: BackendURL): ShortLink => {
+  return {
+    id: url._id ?? url.shortId,
+    shortId: url.shortId,
+    originalUrl: url.redirectUrl,
+    clicks: url.visitHistory?.length ?? 0,
+    createdAt: url.createdAt
+      ? new Date(url.createdAt).toLocaleDateString()
+      : "—",
+    status: "active",
+  };
+};
+
 export default function LinksManager() {
-  const [links, setLinks] = useState<ShortLink[]>(recentLinks);
+  const [links, setLinks] = useState<ShortLink[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   const [filter, setFilter] = useState<Filter>("all");
   const [search, setSearch] = useState("");
 
-  // Strong refresh when this page/tab becomes visible
+// Fetch URLs when component mounts
+useEffect(() => {
+  let ignore = false;
+
+  getAllURLs()
+    .then((data) => {
+      if (ignore) return;
+
+      setError(null);
+      setLinks(data.map(mapBackendURL));
+    })
+    .catch((err: unknown) => {
+      if (ignore) return;
+
+      setError(
+        err instanceof Error ? err.message : "Failed to load links",
+      );
+    })
+    .finally(() => {
+      if (!ignore) {
+        setIsLoading(false);
+      }
+    });
+
+  return () => {
+    ignore = true;
+  };
+}, []);
+
+  // Create a new short URL
+ const handleCreateLink = async (url: string) => {
+  try {
+    setError(null);
+
+    await createShortURL(url);
+
+    const data = await getAllURLs();
+    setLinks(data.map(mapBackendURL));
+  } catch (err) {
+    setError(
+      err instanceof Error ? err.message : "Failed to create link",
+    );
+  }
+};
+
+  // Delete a URL from backend
+  const handleDeleteLink = async (shortId: string) => {
+    try {
+      setError(null);
+
+      await deleteShortURL(shortId);
+
+      setLinks((currentLinks) =>
+        currentLinks.filter((link) => link.shortId !== shortId),
+      );
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to delete link",
+      );
+    }
+  };
+
+  // Refresh AOS animations
   useEffect(() => {
-    // Multiple refreshes with different delays to cover different mount timings
     const timers = [
       setTimeout(() => AOS.refreshHard(), 50),
       setTimeout(() => AOS.refreshHard(), 200),
@@ -28,9 +113,12 @@ export default function LinksManager() {
     return () => timers.forEach(clearTimeout);
   }, []);
 
+  // Search and filter URLs
   const filteredLinks = useMemo(() => {
     return links.filter((link) => {
-      const matchesFilter = filter === "all" || link.status === filter;
+      const matchesFilter =
+        filter === "all" || link.status === filter;
+
       const query = search.toLowerCase();
 
       const matchesSearch =
@@ -41,40 +129,19 @@ export default function LinksManager() {
     });
   }, [links, filter, search]);
 
-  function handleCreateLink(url: string) {
-    const shortId = crypto.randomUUID().replaceAll("-", "").slice(0, 8);
-
-    const newLink: ShortLink = {
-      id: shortId,
-      shortId,
-      originalUrl: url,
-      clicks: 0,
-      createdAt: new Date().toLocaleDateString("en-US", {
-        month: "short",
-        day: "2-digit",
-        year: "numeric",
-      }),
-      status: "active",
-    };
-
-    setLinks((current) => [newLink, ...current]);
-  }
-
+  // Toggle status (currently frontend-only)
   function handleToggleStatus(id: string) {
     setLinks((current) =>
       current.map((link) =>
         link.id === id
           ? {
-              ...link,
-              status: link.status === "active" ? "inactive" : "active",
-            }
-          : link
-      )
+            ...link,
+            status:
+              link.status === "active" ? "inactive" : "active",
+          }
+          : link,
+      ),
     );
-  }
-
-  function handleDelete(id: string) {
-    setLinks((current) => current.filter((link) => link.id !== id));
   }
 
   return (
@@ -132,6 +199,22 @@ export default function LinksManager() {
           </div>
         </div>
 
+        {/* API loading and error states */}
+        {isLoading && (
+          <p className="text-sm text-zinc-400" role="status">
+            Loading your links...
+          </p>
+        )}
+
+        {error && (
+          <p
+            className="rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-400"
+            role="alert"
+          >
+            {error}
+          </p>
+        )}
+
         <div
           className="flex flex-wrap gap-2"
           data-aos="fade-up"
@@ -143,22 +226,23 @@ export default function LinksManager() {
               key={item}
               type="button"
               onClick={() => setFilter(item)}
-              className={`rounded-lg px-4 py-2 text-sm capitalize transition ${
-                filter === item
+              className={`rounded-lg px-4 py-2 text-sm capitalize transition ${filter === item
                   ? "bg-violet-600 text-white"
                   : "border border-white/10 bg-[#15121f] text-zinc-400 hover:text-white"
-              }`}
+                }`}
             >
               {item}
             </button>
           ))}
         </div>
 
-        <LinksTable
-          links={filteredLinks}
-          onDelete={handleDelete}
-          onToggleStatus={handleToggleStatus}
-        />
+        {!isLoading && (
+          <LinksTable
+            links={filteredLinks}
+            onDelete={handleDeleteLink}
+            onToggleStatus={handleToggleStatus}
+          />
+        )}
       </section>
     </div>
   );
