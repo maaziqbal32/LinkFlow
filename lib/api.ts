@@ -1,24 +1,24 @@
 const API_BASE_URL =
-    process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001";
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001";
 
 export type BackendURL = {
-    _id?: string;
-    shortId: string;
-    redirectUrl: string;
-    visitHistory?: {
-        timestamps: number;
-    }[];
-    createdAt?: string;
+  _id?: string;
+  shortId: string;
+  redirectUrl: string;
+  visitHistory?: {
+    timestamp: number | string;
+  }[];
+  createdAt?: string;
 };
 
 
-async function handleResponse<T>(response:Response): Promise<T> {
-    const data = await response.json();
+async function handleResponse<T>(response: Response): Promise<T> {
+  const data = await response.json();
 
-    if(!response.ok){
-        throw new Error(data.error || "something went wrong");
-    }
-    return data as T;
+  if (!response.ok) {
+    throw new Error(data.error || "something went wrong");
+  }
+  return data as T;
 }
 
 // Fetch all URLs

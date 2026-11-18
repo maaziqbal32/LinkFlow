@@ -1,36 +1,226 @@
+
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
 import {
   Activity,
   MousePointerClick,
   Link2,
   TrendingUp,
-  Globe2,
 } from "lucide-react";
 
-const stats = [
-  { label: "Total clicks", value: "24,892", change: "+18.2%", icon: MousePointerClick },
-  { label: "Total links", value: "128", change: "+12.5%", icon: Link2 },
-  { label: "Avg. clicks per link", value: "194", change: "+5.6%", icon: TrendingUp },
-  { label: "Active links", value: "116", change: "+8.4%", icon: Activity },
-];
+import { getAllURLs, type BackendURL } from "@/lib/api";
 
-const weeklyClicks = [
-  { day: "Mon", clicks: 42 },
-  { day: "Tue", clicks: 68 },
-  { day: "Wed", clicks: 54 },
-  { day: "Thu", clicks: 85 },
-  { day: "Fri", clicks: 62 },
-  { day: "Sat", clicks: 96 },
-  { day: "Sun", clicks: 74 },
-];
+const formatNumber = (value: number) =>
+  new Intl.NumberFormat("en-US").format(value);
 
-const sources = [
-  { name: "Direct", value: 48, color: "bg-violet-500" },
-  { name: "Social media", value: 27, color: "bg-blue-500" },
-  { name: "Search", value: 16, color: "bg-emerald-500" },
-  { name: "Other", value: 9, color: "bg-amber-500" },
-];
+const getDateKey = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 
 export default function AnalyticsOverview() {
+  const [urls, setUrls] = useState<BackendURL[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch URL and visit history data from backend
+  useEffect(() => {
+    let ignore = false;
+
+    getAllURLs()
+      .then((data) => {
+        if (ignore) return;
+
+
+        console.log(
+          "RAW VISIT HISTORY:",
+          data.map((url) => ({
+            shortId: url.shortId,
+            visitHistory: url.visitHistory,
+          })),
+        );
+        setUrls(data);
+        setError(null);
+      })
+      .catch((err: unknown) => {
+        if (ignore) return;
+
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Failed to load analytics",
+        );
+      })
+      .finally(() => {
+        if (!ignore) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  // Calculate analytics from actual visit history
+  const analytics = useMemo(() => {
+    const allVisits = urls.flatMap((url) =>
+      (url.visitHistory ?? []).map((visit) => {
+        const rawTimestamp = visit.timestamp;
+
+        const timestamp =
+          typeof rawTimestamp === "number"
+            ? rawTimestamp
+            : Number.isFinite(Number(rawTimestamp))
+              ? Number(rawTimestamp)
+              : new Date(rawTimestamp).getTime();
+
+        return {
+          shortId: url.shortId,
+          redirectUrl: url.redirectUrl,
+          timestamp,
+        };
+      }),
+    );
+
+    const validVisits = allVisits.filter(
+      (visit) => Number.isFinite(visit.timestamp),
+    );
+
+    const totalClicks = urls.reduce(
+      (total, url) => total + (url.visitHistory?.length ?? 0),
+      0,
+    );
+    const totalLinks = urls.length;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Last 7 days, including today
+    const weeklyClicks = Array.from({ length: 7 }, (_, index) => {
+      const date = new Date(today);
+      date.setDate(today.getDate() - (6 - index));
+
+      return {
+        date,
+        key: getDateKey(date),
+        day: date.toLocaleDateString("en-US", {
+          weekday: "short",
+        }),
+        clicks: 0,
+      };
+    });
+
+    const weeklyMap = new Map(
+      weeklyClicks.map((day) => [day.key, day]),
+    );
+
+    const currentWeekStart = weeklyClicks[0].date;
+    const previousWeekStart = new Date(currentWeekStart);
+    previousWeekStart.setDate(
+      previousWeekStart.getDate() - 7,
+    );
+
+    let previousWeekClicks = 0;
+    let currentWeekTotal = 0;
+
+    validVisits.forEach((visit) => {
+      const visitDate = new Date(visit.timestamp);
+
+      if (
+        visitDate >= previousWeekStart &&
+        visitDate < currentWeekStart
+      ) {
+        previousWeekClicks++;
+      }
+
+      const key = getDateKey(visitDate);
+      const day = weeklyMap.get(key);
+
+      if (day) {
+        day.clicks++;
+        currentWeekTotal++;
+      }
+    });
+
+    // Most clicked links
+    const topLinks = urls
+      .map((url) => ({
+        shortId: url.shortId,
+        redirectUrl: url.redirectUrl,
+        clicks: url.visitHistory?.length ?? 0,
+      }))
+      .sort((a, b) => b.clicks - a.clicks)
+      .slice(0, 4);
+
+    const topDay = [...weeklyClicks].sort(
+      (a, b) => b.clicks - a.clicks,
+    )[0];
+
+    let trendText = "No recent activity";
+    let trendGrowing = false;
+
+    if (previousWeekClicks === 0 && currentWeekTotal > 0) {
+      trendText = "New activity this week";
+      trendGrowing = true;
+    } else if (previousWeekClicks > 0) {
+      const change =
+        ((currentWeekTotal - previousWeekClicks) /
+          previousWeekClicks) *
+        100;
+
+      trendGrowing = change >= 0;
+
+      trendText = `${change >= 0 ? "+" : ""}${change.toFixed(1)}% vs previous 7 days`;
+    }
+
+    return {
+      totalClicks,
+      totalLinks,
+      averageClicks: totalLinks
+        ? (totalClicks / totalLinks).toFixed(1)
+        : "0.0",
+      linksWithClicks: urls.filter(
+        (url) => (url.visitHistory?.length ?? 0) > 0,
+      ).length,
+      weeklyClicks,
+      maxWeeklyClicks: Math.max(
+        1,
+        ...weeklyClicks.map((day) => day.clicks),
+      ),
+      topLinks,
+      topDay,
+      trendText,
+      trendGrowing,
+    };
+  }, [urls]);
+
+  const stats = [
+    {
+      label: "Total clicks",
+      value: formatNumber(analytics.totalClicks),
+      description: "All recorded visits",
+      icon: MousePointerClick,
+    },
+    {
+      label: "Total links",
+      value: formatNumber(analytics.totalLinks),
+      description: "Stored in database",
+      icon: Link2,
+    },
+    {
+      label: "Avg. clicks per link",
+      value: analytics.averageClicks,
+      description: "Average across all links",
+      icon: TrendingUp,
+    },
+    {
+      label: "Links with clicks",
+      value: formatNumber(analytics.linksWithClicks),
+      description: "Received at least one visit",
+      icon: Activity,
+    },
+  ];
+
   return (
     <div className="space-y-8">
       {/* Page header */}
@@ -39,14 +229,29 @@ export default function AnalyticsOverview() {
         data-aos-delay="100"
         suppressHydrationWarning
       >
-        <p className="text-sm font-medium text-violet-400">PERFORMANCE</p>
-        <h1 className="mt-2 text-3xl font-bold text-white">Analytics</h1>
+        <p className="text-sm font-medium text-violet-400">
+          PERFORMANCE
+        </p>
+
+        <h1 className="mt-2 text-3xl font-bold text-white">
+          Analytics
+        </h1>
+
         <p className="mt-2 text-sm text-zinc-400">
           Understand how your shortened links are performing.
         </p>
       </div>
 
-      {/* Stat cards — staggered cascade */}
+      {error && (
+        <p
+          role="alert"
+          className="rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-400"
+        >
+          {error}
+        </p>
+      )}
+
+      {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((stat, index) => {
           const Icon = stat.icon;
@@ -60,12 +265,19 @@ export default function AnalyticsOverview() {
               className="rounded-2xl border border-white/10 bg-[#15121f] p-5"
             >
               <div className="flex items-center justify-between">
-                <span className="text-sm text-zinc-400">{stat.label}</span>
+                <span className="text-sm text-zinc-400">
+                  {stat.label}
+                </span>
+
                 <Icon size={19} className="text-violet-400" />
               </div>
-              <p className="mt-4 text-2xl font-bold text-white">{stat.value}</p>
-              <p className="mt-2 text-xs text-emerald-400">
-                {stat.change} <span className="text-zinc-500">vs last month</span>
+
+              <p className="mt-4 text-2xl font-bold text-white">
+                {isLoading ? "—" : stat.value}
+              </p>
+
+              <p className="mt-2 text-xs text-zinc-500">
+                {stat.description}
               </p>
             </div>
           );
@@ -73,7 +285,7 @@ export default function AnalyticsOverview() {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.6fr_1fr]">
-        {/* Weekly chart */}
+        {/* Weekly clicks */}
         <section
           className="rounded-2xl border border-white/10 bg-[#15121f] p-5 sm:p-6"
           data-aos="fade-up"
@@ -81,34 +293,54 @@ export default function AnalyticsOverview() {
           suppressHydrationWarning
         >
           <div className="mb-8">
-            <h2 className="font-semibold text-white">Weekly click activity</h2>
-            <p className="mt-1 text-sm text-zinc-400">Sample clicks over the last 7 days</p>
+            <h2 className="font-semibold text-white">
+              Weekly click activity
+            </h2>
+
+            <p className="mt-1 text-sm text-zinc-400">
+              Actual clicks recorded over the last 7 days
+            </p>
           </div>
 
-          <div className="flex h-64 items-end justify-between gap-3">
-            {weeklyClicks.map((item, index) => (
-              <div
-                key={item.day}
-                data-aos="zoom-in-up"
-                data-aos-delay={400 + index * 70}
-                suppressHydrationWarning
-                className="flex h-full flex-1 flex-col items-center justify-end gap-3"
-              >
-                <span className="text-xs text-zinc-400">{item.clicks}</span>
-                <div className="flex h-[78%] w-full items-end">
-                  <div
-                    className="w-full rounded-t-lg bg-violet-500/80 transition hover:bg-violet-400"
-                    style={{ height: `${item.clicks}%` }}
-                    title={`${item.clicks} clicks`}
-                  />
+          {isLoading ? (
+            <p className="py-12 text-center text-sm text-zinc-400">
+              Loading analytics...
+            </p>
+          ) : (
+            <div className="flex h-64 items-end justify-between gap-3">
+              {analytics.weeklyClicks.map((item, index) => (
+                <div
+                  key={item.key}
+                  data-aos="zoom-in-up"
+                  data-aos-delay={400 + index * 70}
+                  suppressHydrationWarning
+                  className="flex h-full flex-1 flex-col items-center justify-end gap-3"
+                >
+                  <span className="text-xs text-zinc-400">
+                    {item.clicks}
+                  </span>
+
+                  <div className="flex h-[78%] w-full items-end">
+                    <div
+                      className="w-full rounded-t-lg bg-violet-500/80 transition hover:bg-violet-400"
+                      style={{
+                        height: `${(item.clicks / analytics.maxWeeklyClicks) * 100}%`,
+                        minHeight: item.clicks > 0 ? "4px" : "0px",
+                      }}
+                      title={`${item.clicks} clicks`}
+                    />
+                  </div>
+
+                  <span className="text-xs text-zinc-500">
+                    {item.day}
+                  </span>
                 </div>
-                <span className="text-xs text-zinc-500">{item.day}</span>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </section>
 
-        {/* Traffic sources */}
+        {/* Top performing links */}
         <section
           className="rounded-2xl border border-white/10 bg-[#15121f] p-5 sm:p-6"
           data-aos="fade-up"
@@ -116,58 +348,115 @@ export default function AnalyticsOverview() {
           suppressHydrationWarning
         >
           <div className="mb-7 flex items-center gap-2">
-            <Globe2 size={18} className="text-violet-400" />
-            <h2 className="font-semibold text-white">Traffic sources</h2>
+            <Link2 size={18} className="text-violet-400" />
+
+            <h2 className="font-semibold text-white">
+              Top performing links
+            </h2>
           </div>
 
-          <div className="space-y-6">
-            {sources.map((source, index) => (
-              <div
-                key={source.name}
-                data-aos="fade-up"
-                data-aos-delay={450 + index * 80}
-                suppressHydrationWarning
-              >
-                <div className="mb-2 flex justify-between text-sm">
-                  <span className="text-zinc-300">{source.name}</span>
-                  <span className="text-zinc-400">{source.value}%</span>
+          {isLoading ? (
+            <p className="text-sm text-zinc-400">
+              Loading links...
+            </p>
+          ) : analytics.topLinks.length === 0 ? (
+            <p className="text-sm text-zinc-400">
+              No links available yet.
+            </p>
+          ) : (
+            <div className="space-y-5">
+              {analytics.topLinks.map((link, index) => (
+                <div
+                  key={link.shortId}
+                  data-aos="fade-up"
+                  data-aos-delay={450 + index * 80}
+                  suppressHydrationWarning
+                >
+                  <div className="mb-2 flex items-center justify-between gap-3 text-sm">
+                    <div className="min-w-0">
+                      <p className="truncate text-zinc-300">
+                        {link.shortId}
+                      </p>
+                      <p className="truncate text-xs text-zinc-500">
+                        {link.redirectUrl}
+                      </p>
+                    </div>
+
+                    <span className="shrink-0 text-zinc-400">
+                      {formatNumber(link.clicks)} clicks
+                    </span>
+                  </div>
+
+                  <div className="h-2 overflow-hidden rounded-full bg-white/5">
+                    <div
+                      className="h-full rounded-full bg-violet-500"
+                      style={{
+                        width: `${analytics.topLinks[0].clicks > 0
+                          ? (link.clicks /
+                            analytics.topLinks[0].clicks) *
+                          100
+                          : 0
+                          }%`,
+                      }}
+                    />
+                  </div>
                 </div>
-                <div className="h-2 overflow-hidden rounded-full bg-white/5">
-                  <div
-                    className={`h-full rounded-full ${source.color}`}
-                    style={{ width: `${source.value}%` }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </section>
       </div>
 
       {/* Insights */}
-      <section
-        className="rounded-2xl border border-white/10 bg-[#15121f] p-5 sm:p-6"
-      >
+      <section className="rounded-2xl border border-white/10 bg-[#15121f] p-5 sm:p-6">
         <div className="mb-5 flex items-center gap-2">
-          <MousePointerClick size={18} className="text-violet-400" />
-          <h2 className="font-semibold text-white">Analytics insights</h2>
+          <MousePointerClick
+            size={18}
+            className="text-violet-400"
+          />
+
+          <h2 className="font-semibold text-white">
+            Analytics insights
+          </h2>
         </div>
+
         <div className="grid gap-4 md:grid-cols-2">
-          <div
-            className="rounded-xl bg-white/3 p-4"
-          >
-            <p className="text-sm text-zinc-400">Top performing period</p>
-            <p className="mt-2 text-xl font-semibold text-white">Saturday</p>
-            <p className="mt-1 text-xs text-zinc-500">Based on sample weekly activity</p>
-          </div>
-          <div
-            className="rounded-xl bg-white/3 p-4"
-          >
-            <p className="text-sm text-zinc-400">Engagement trend</p>
-            <p className="mt-2 flex items-center gap-2 text-xl font-semibold text-emerald-400">
-              <TrendingUp size={20} /> Growing
+          <div className="rounded-xl bg-white/3 p-4">
+            <p className="text-sm text-zinc-400">
+              Top performing day
             </p>
-            <p className="mt-1 text-xs text-zinc-500">Illustrative dashboard insight</p>
+
+            <p className="mt-2 text-xl font-semibold text-white">
+              {isLoading
+                ? "Loading..."
+                : analytics.topDay.clicks > 0
+                  ? analytics.topDay.day
+                  : "No clicks yet"}
+            </p>
+
+            <p className="mt-1 text-xs text-zinc-500">
+              Based on the last 7 days
+            </p>
+          </div>
+
+          <div className="rounded-xl bg-white/3 p-4">
+            <p className="text-sm text-zinc-400">
+              Weekly engagement trend
+            </p>
+
+            <p
+              className={`mt-2 flex items-center gap-2 text-xl font-semibold ${analytics.trendGrowing
+                ? "text-emerald-400"
+                : "text-zinc-300"
+                }`}
+            >
+              <TrendingUp size={20} />
+              {isLoading ? "Loading..." : analytics.trendText}
+            </p>
+
+            <p className="mt-1 text-xs text-zinc-500">
+              Compared with the previous 7 days
+            </p>
           </div>
         </div>
       </section>

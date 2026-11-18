@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { Search } from "lucide-react";
 import type { ShortLink } from "@/types/dashboard";
 import CreateLinkForm from "./CreateLinkForm";
@@ -39,50 +39,78 @@ export default function LinksManager() {
   const [filter, setFilter] = useState<Filter>("all");
   const [search, setSearch] = useState("");
 
-// Fetch URLs when component mounts
-useEffect(() => {
-  let ignore = false;
+  // Refresh links when user returns to dashboard
+  const refreshLinks = useCallback(async () => {
+    try {
+      const data = await getAllURLs();
 
-  getAllURLs()
-    .then((data) => {
-      if (ignore) return;
-
-      setError(null);
       setLinks(data.map(mapBackendURL));
-    })
-    .catch((err: unknown) => {
-      if (ignore) return;
-
+      setError(null);
+    } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Failed to load links",
+        err instanceof Error
+          ? err.message
+          : "Failed to refresh links",
       );
-    })
-    .finally(() => {
-      if (!ignore) {
-        setIsLoading(false);
-      }
-    });
+    }
+  }, []);
+  // Automatically refresh when user returns to dashboard tab
+  useEffect(() => {
+    const handleFocus = () => {
+      void refreshLinks();
+    };
 
-  return () => {
-    ignore = true;
-  };
-}, []);
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [refreshLinks]);
+
+  // Fetch URLs when component mounts
+  useEffect(() => {
+    let ignore = false;
+
+    getAllURLs()
+      .then((data) => {
+        if (ignore) return;
+
+        setError(null);
+        setLinks(data.map(mapBackendURL));
+      })
+      .catch((err: unknown) => {
+        if (ignore) return;
+
+        setError(
+          err instanceof Error ? err.message : "Failed to load links",
+        );
+      })
+      .finally(() => {
+        if (!ignore) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   // Create a new short URL
- const handleCreateLink = async (url: string) => {
-  try {
-    setError(null);
+  const handleCreateLink = async (url: string) => {
+    try {
+      setError(null);
 
-    await createShortURL(url);
+      await createShortURL(url);
 
-    const data = await getAllURLs();
-    setLinks(data.map(mapBackendURL));
-  } catch (err) {
-    setError(
-      err instanceof Error ? err.message : "Failed to create link",
-    );
-  }
-};
+      const data = await getAllURLs();
+      setLinks(data.map(mapBackendURL));
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to create link",
+      );
+    }
+  };
 
   // Delete a URL from backend
   const handleDeleteLink = async (shortId: string) => {
@@ -227,8 +255,8 @@ useEffect(() => {
               type="button"
               onClick={() => setFilter(item)}
               className={`rounded-lg px-4 py-2 text-sm capitalize transition ${filter === item
-                  ? "bg-violet-600 text-white"
-                  : "border border-white/10 bg-[#15121f] text-zinc-400 hover:text-white"
+                ? "bg-violet-600 text-white"
+                : "border border-white/10 bg-[#15121f] text-zinc-400 hover:text-white"
                 }`}
             >
               {item}

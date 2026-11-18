@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import type { ShortLink } from "@/types/dashboard";
 
-const BASE_URL = "https://linkflow.app";
+const BASE_URL = "http://localhost:8001";
 
 type LinksTableProps = {
   links: ShortLink[];
