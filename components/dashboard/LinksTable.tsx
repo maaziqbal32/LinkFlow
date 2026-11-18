@@ -12,7 +12,9 @@ import {
 } from "lucide-react";
 import type { ShortLink } from "@/types/dashboard";
 
-const BASE_URL = "http://localhost:8001";
+const BASE_URL =
+  process.env.NEXT_PUBLIC_SHORT_URL_BASE ||
+  "http://localhost:8001";
 
 type LinksTableProps = {
   links: ShortLink[];
@@ -97,11 +99,10 @@ export default function LinksTable({
 
                 <td className="px-5 py-4">
                   <span
-                    className={`rounded-full px-2.5 py-1 text-xs ${
-                      link.status === "active"
+                    className={`rounded-full px-2.5 py-1 text-xs ${link.status === "active"
                         ? "bg-emerald-500/10 text-emerald-400"
                         : "bg-zinc-500/10 text-zinc-400"
-                    }`}
+                      }`}
                   >
                     {link.status}
                   </span>
@@ -134,7 +135,7 @@ export default function LinksTable({
 
                     <button
                       type="button"
-                      onClick={() => onToggleStatus(link.id)}
+                      onClick={() => onToggleStatus(link.shortId)}
                       title="Toggle status"
                       aria-label="Toggle link status"
                       className="rounded-lg p-2 text-zinc-400 transition hover:bg-violet-500/10 hover:text-violet-400"

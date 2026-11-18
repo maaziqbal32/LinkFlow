@@ -1,18 +1,20 @@
-
 "use client";
 
 import { useState, type FormEvent } from "react";
 import { Link2, Plus } from "lucide-react";
 
 type CreateLinkFormProps = {
-  onCreate: (url: string) => void;
+  onCreate: (url: string) => Promise<void>;
 };
 
-export default function CreateLinkForm({ onCreate }: CreateLinkFormProps) {
+export default function CreateLinkForm({
+  onCreate,
+}: CreateLinkFormProps) {
   const [originalUrl, setOriginalUrl] = useState("");
   const [urlError, setUrlError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     let normalizedUrl = originalUrl.trim();
@@ -22,22 +24,48 @@ export default function CreateLinkForm({ onCreate }: CreateLinkFormProps) {
       return;
     }
 
+    // Automatically add HTTPS when protocol is missing
     if (!/^https?:\/\//i.test(normalizedUrl)) {
       normalizedUrl = `https://${normalizedUrl}`;
     }
 
+    let parsedUrl: URL;
+
     try {
-      const parsedUrl = new URL(normalizedUrl);
-
-      if (!["http:", "https:"].includes(parsedUrl.protocol)) {
-        throw new Error("Invalid protocol");
-      }
-
-      onCreate(parsedUrl.toString());
-      setOriginalUrl("");
-      setUrlError("");
+      parsedUrl = new URL(normalizedUrl);
     } catch {
       setUrlError("Please enter a valid URL.");
+      return;
+    }
+
+    const validHostname =
+      parsedUrl.hostname === "localhost" ||
+      parsedUrl.hostname.includes(".");
+
+    if (
+      !["http:", "https:"].includes(parsedUrl.protocol) ||
+      !validHostname
+    ) {
+      setUrlError("Please enter a valid domain, such as google.com.");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      setUrlError("");
+
+      await onCreate(parsedUrl.toString());
+
+      // Clear the form only after successful creation
+      setOriginalUrl("");
+    } catch (error) {
+      setUrlError(
+        error instanceof Error
+          ? error.message
+          : "Failed to create short link.",
+      );
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -54,7 +82,9 @@ export default function CreateLinkForm({ onCreate }: CreateLinkFormProps) {
         </div>
 
         <div>
-          <h2 className="font-semibold text-white">Create a short link</h2>
+          <h2 className="font-semibold text-white">
+            Create a short link
+          </h2>
           <p className="text-sm text-zinc-400">
             Paste a long URL to generate a shorter one.
           </p>
@@ -62,7 +92,10 @@ export default function CreateLinkForm({ onCreate }: CreateLinkFormProps) {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-3">
-        <label htmlFor="destination-url" className="text-sm text-zinc-300">
+        <label
+          htmlFor="destination-url"
+          className="text-sm text-zinc-300"
+        >
           Destination URL
         </label>
 
@@ -76,15 +109,17 @@ export default function CreateLinkForm({ onCreate }: CreateLinkFormProps) {
               setUrlError("");
             }}
             placeholder="https://example.com/your-long-url"
-            className="min-w-0 flex-1 rounded-xl border border-white/10 bg-[#0c0a12] px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-violet-500"
+            disabled={isSubmitting}
+            className="min-w-0 flex-1 rounded-xl border border-white/10 bg-[#0c0a12] px-4 py-3 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-violet-500 disabled:opacity-60"
           />
 
           <button
             type="submit"
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-violet-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-violet-500"
+            disabled={isSubmitting}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-violet-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Link2 size={17} />
-            Generate link
+            {isSubmitting ? "Creating..." : "Generate link"}
           </button>
         </div>
 

@@ -12,6 +12,7 @@ import {
   getAllURLs,
   createShortURL,
   deleteShortURL,
+  updateShortURLStatus,
   type BackendURL,
 } from "@/lib/api";
 
@@ -27,7 +28,7 @@ const mapBackendURL = (url: BackendURL): ShortLink => {
     createdAt: url.createdAt
       ? new Date(url.createdAt).toLocaleDateString()
       : "—",
-    status: "active",
+    status: url.status ?? "active",
   };
 };
 
@@ -98,18 +99,11 @@ export default function LinksManager() {
 
   // Create a new short URL
   const handleCreateLink = async (url: string) => {
-    try {
-      setError(null);
+    await createShortURL(url);
 
-      await createShortURL(url);
+    const data = await getAllURLs();
 
-      const data = await getAllURLs();
-      setLinks(data.map(mapBackendURL));
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to create link",
-      );
-    }
+    setLinks(data.map(mapBackendURL));
   };
 
   // Delete a URL from backend
@@ -158,19 +152,36 @@ export default function LinksManager() {
   }, [links, filter, search]);
 
   // Toggle status (currently frontend-only)
-  function handleToggleStatus(id: string) {
-    setLinks((current) =>
-      current.map((link) =>
-        link.id === id
-          ? {
-            ...link,
-            status:
-              link.status === "active" ? "inactive" : "active",
-          }
-          : link,
-      ),
+  const handleToggleStatus = async (shortId: string) => {
+    const currentLink = links.find(
+      (link) => link.shortId === shortId,
     );
-  }
+
+    if (!currentLink) return;
+
+    const nextStatus =
+      currentLink.status === "active" ? "inactive" : "active";
+
+    try {
+      setError(null);
+
+      await updateShortURLStatus(shortId, nextStatus);
+
+      setLinks((currentLinks) =>
+        currentLinks.map((link) =>
+          link.shortId === shortId
+            ? { ...link, status: nextStatus }
+            : link,
+        ),
+      );
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to update link status",
+      );
+    }
+  };
 
   return (
     <div className="space-y-8">

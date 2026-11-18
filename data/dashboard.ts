@@ -1,39 +1,9 @@
 import type {
-  DashboardStat,
   ShortLink,
   DashboardNavItem,
 } from "@/types/dashboard";
 
-export const dashboardStats: DashboardStat[] = [
-  {
-    id: "links",
-    label: "Total Links",
-    value: "128",
-    change: "+12.5%",
-    description: "Compared to last month",
-  },
-  {
-    id: "clicks",
-    label: "Total Clicks",
-    value: "24,892",
-    change: "+18.2%",
-    description: "Compared to last month",
-  },
-  {
-    id: "active",
-    label: "Active Links",
-    value: "116",
-    change: "+8.4%",
-    description: "Currently active",
-  },
-  {
-    id: "engagement",
-    label: "Average Clicks",
-    value: "194",
-    change: "+5.6%",
-    description: "Per shortened link",
-  },
-];
+
 
 export const recentLinks: ShortLink[] = [
   {
