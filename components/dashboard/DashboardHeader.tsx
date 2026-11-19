@@ -1,5 +1,5 @@
 import { Bell, Search } from "lucide-react";
-
+import LogoutButton from "@/components/auth/LogoutButton";
 export default function DashboardHeader() {
   return (
     <header className="flex h-20 items-center justify-between border-b border-white/10 px-5 sm:px-8">
@@ -26,6 +26,7 @@ export default function DashboardHeader() {
         <div className="flex h-9 w-9 items-center justify-center rounded-full bg-violet-600 text-sm font-semibold">
           M
         </div>
+        <LogoutButton />
       </div>
     </header>
   );

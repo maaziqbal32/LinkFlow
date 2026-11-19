@@ -17,56 +17,64 @@ export default function CreateLinkForm({
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    let normalizedUrl = originalUrl.trim();
+ let normalizedUrl = originalUrl.trim();
 
-    if (!normalizedUrl) {
-      setUrlError("Please enter a destination URL.");
-      return;
-    }
+if (!normalizedUrl) {
+  setUrlError("Please enter a destination URL.");
+  return;
+}
 
-    // Automatically add HTTPS when protocol is missing
-    if (!/^https?:\/\//i.test(normalizedUrl)) {
-      normalizedUrl = `https://${normalizedUrl}`;
-    }
+// Handle pasted Markdown links: [label](https://example.com)
+const markdownMatch = normalizedUrl.match(
+  /^\[[^\]]+\]\((https?:\/\/[^)\s]+)\)$/i,
+);
 
-    let parsedUrl: URL;
+if (markdownMatch) {
+  normalizedUrl = markdownMatch[1];
+}
 
-    try {
-      parsedUrl = new URL(normalizedUrl);
-    } catch {
-      setUrlError("Please enter a valid URL.");
-      return;
-    }
+// Add HTTPS if protocol is missing
+if (!/^https?:\/\//i.test(normalizedUrl)) {
+  normalizedUrl = `https://${normalizedUrl}`;
+}
 
-    const validHostname =
-      parsedUrl.hostname === "localhost" ||
-      parsedUrl.hostname.includes(".");
+let parsedUrl: URL;
 
-    if (
-      !["http:", "https:"].includes(parsedUrl.protocol) ||
-      !validHostname
-    ) {
-      setUrlError("Please enter a valid domain, such as google.com.");
-      return;
-    }
+try {
+  parsedUrl = new URL(normalizedUrl);
 
-    try {
-      setIsSubmitting(true);
-      setUrlError("");
+  const validHostname =
+    parsedUrl.hostname === "localhost" ||
+    parsedUrl.hostname.includes(".");
 
-      await onCreate(parsedUrl.toString());
+  if (
+    !["http:", "https:"].includes(parsedUrl.protocol) ||
+    !validHostname
+  ) {
+    throw new Error("Invalid URL");
+  }
+} catch {
+  setUrlError("Please enter a valid URL.");
+  return;
+}
 
-      // Clear the form only after successful creation
-      setOriginalUrl("");
-    } catch (error) {
-      setUrlError(
-        error instanceof Error
-          ? error.message
-          : "Failed to create short link.",
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
+try {
+  setIsSubmitting(true);
+  setUrlError("");
+
+  await onCreate(parsedUrl.toString());
+
+  setOriginalUrl("");
+} catch (error) {
+  setUrlError(
+    error instanceof Error
+      ? error.message
+      : "Failed to create short link.",
+  );
+} finally {
+  setIsSubmitting(false);
+}
+
   }
 
   return (

@@ -152,36 +152,45 @@ export default function LinksManager() {
   }, [links, filter, search]);
 
   // Toggle status (currently frontend-only)
-  const handleToggleStatus = async (shortId: string) => {
-    const currentLink = links.find(
-      (link) => link.shortId === shortId,
+ const handleToggleStatus = async (shortId: string) => {
+  const currentLink = links.find(
+    (link) => link.shortId === shortId,
+  );
+
+  if (!currentLink) return;
+
+  const nextStatus =
+    currentLink.status === "active" ? "inactive" : "active";
+
+  try {
+    setError(null);
+
+    const result = await updateShortURLStatus(
+      shortId,
+      nextStatus,
     );
 
-    if (!currentLink) return;
+    // Use the status confirmed by backend
+    setLinks((currentLinks) =>
+      currentLinks.map((link) =>
+        link.shortId === shortId
+          ? { ...link, status: result.status as "active" | "inactive" }
+          : link,
+      ),
+    );
 
-    const nextStatus =
-      currentLink.status === "active" ? "inactive" : "active";
+    // Verify latest database state
+    const freshData = await getAllURLs();
 
-    try {
-      setError(null);
-
-      await updateShortURLStatus(shortId, nextStatus);
-
-      setLinks((currentLinks) =>
-        currentLinks.map((link) =>
-          link.shortId === shortId
-            ? { ...link, status: nextStatus }
-            : link,
-        ),
-      );
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to update link status",
-      );
-    }
-  };
+    setLinks(freshData.map(mapBackendURL));
+  } catch (error) {
+    setError(
+      error instanceof Error
+        ? error.message
+        : "Failed to update link status",
+    );
+  }
+};
 
   return (
     <div className="space-y-8">

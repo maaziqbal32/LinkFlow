@@ -21,7 +21,7 @@ export default function AnalyticsOverview() {
   const [urls, setUrls] = useState<BackendURL[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
+  const [referenceTime, setReferenceTime] = useState<number | null>(null);
   // Fetch URL and visit history data from backend
   useEffect(() => {
     let ignore = false;
@@ -52,6 +52,7 @@ export default function AnalyticsOverview() {
       })
       .finally(() => {
         if (!ignore) {
+          setReferenceTime(Date.now());
           setIsLoading(false);
         }
       });
@@ -92,7 +93,7 @@ export default function AnalyticsOverview() {
     );
     const totalLinks = urls.length;
 
-    const today = new Date();
+    const today = new Date(referenceTime ?? 0);
     today.setHours(0, 0, 0, 0);
 
     // Last 7 days, including today
@@ -192,7 +193,7 @@ export default function AnalyticsOverview() {
       trendText,
       trendGrowing,
     };
-  }, [urls]);
+  },[urls, referenceTime]);
 
   const stats = [
     {

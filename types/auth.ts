@@ -23,6 +23,12 @@ export type RegisterFormValues = {
   confirmPassword: string;
 };
 
+export type AuthUser = {
+  id: string;
+  name: string;
+  email: string;
+};
+
 export type AuthPageContent = {
   eyebrow: string;
   title: string;
@@ -31,16 +37,18 @@ export type AuthPageContent = {
   footerLinkText: string;
   footerHref: string;
 };
+
 export type AuthShellProps = {
   children: ReactNode;
   content: AuthPageContent;
 };
 
-export type AuthInputProps = InputHTMLAttributes<HTMLInputElement> & {
-  label: string;
-  error?: string;
-  hint?: string;
-};
+export type AuthInputProps =
+  InputHTMLAttributes<HTMLInputElement> & {
+    label: string;
+    error?: string;
+    hint?: string;
+  };
 
 export type PasswordInputProps = {
   label: string;
