@@ -7,6 +7,7 @@ import type { ShortLink } from "@/types/dashboard";
 import CreateLinkForm from "./CreateLinkForm";
 import LinksTable from "./LinksTable";
 import AOS from "aos";
+import { useDashboardSearch } from "./DashboardSearchContext";
 
 import {
   getAllURLs,
@@ -38,7 +39,7 @@ export default function LinksManager() {
   const [error, setError] = useState<string | null>(null);
 
   const [filter, setFilter] = useState<Filter>("all");
-  const [search, setSearch] = useState("");
+  const { searchQuery, setSearchQuery } = useDashboardSearch();
 
   // Refresh links when user returns to dashboard
   const refreshLinks = useCallback(async () => {
@@ -141,7 +142,7 @@ export default function LinksManager() {
       const matchesFilter =
         filter === "all" || link.status === filter;
 
-      const query = search.toLowerCase();
+      const query = searchQuery.trim().toLowerCase();
 
       const matchesSearch =
         link.originalUrl.toLowerCase().includes(query) ||
@@ -149,48 +150,48 @@ export default function LinksManager() {
 
       return matchesFilter && matchesSearch;
     });
-  }, [links, filter, search]);
+  }, [links, filter, searchQuery]);
 
   // Toggle status (currently frontend-only)
- const handleToggleStatus = async (shortId: string) => {
-  const currentLink = links.find(
-    (link) => link.shortId === shortId,
-  );
-
-  if (!currentLink) return;
-
-  const nextStatus =
-    currentLink.status === "active" ? "inactive" : "active";
-
-  try {
-    setError(null);
-
-    const result = await updateShortURLStatus(
-      shortId,
-      nextStatus,
+  const handleToggleStatus = async (shortId: string) => {
+    const currentLink = links.find(
+      (link) => link.shortId === shortId,
     );
 
-    // Use the status confirmed by backend
-    setLinks((currentLinks) =>
-      currentLinks.map((link) =>
-        link.shortId === shortId
-          ? { ...link, status: result.status as "active" | "inactive" }
-          : link,
-      ),
-    );
+    if (!currentLink) return;
 
-    // Verify latest database state
-    const freshData = await getAllURLs();
+    const nextStatus =
+      currentLink.status === "active" ? "inactive" : "active";
 
-    setLinks(freshData.map(mapBackendURL));
-  } catch (error) {
-    setError(
-      error instanceof Error
-        ? error.message
-        : "Failed to update link status",
-    );
-  }
-};
+    try {
+      setError(null);
+
+      const result = await updateShortURLStatus(
+        shortId,
+        nextStatus,
+      );
+
+      // Use the status confirmed by backend
+      setLinks((currentLinks) =>
+        currentLinks.map((link) =>
+          link.shortId === shortId
+            ? { ...link, status: result.status as "active" | "inactive" }
+            : link,
+        ),
+      );
+
+      // Verify latest database state
+      const freshData = await getAllURLs();
+
+      setLinks(freshData.map(mapBackendURL));
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to update link status",
+      );
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -238,8 +239,8 @@ export default function LinksManager() {
             />
 
             <input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
               placeholder="Search links..."
               aria-label="Search links"
               className="w-full rounded-xl border border-white/10 bg-[#15121f] py-2.5 pl-10 pr-4 text-sm text-white outline-none focus:border-violet-500 sm:w-64"
