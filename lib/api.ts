@@ -17,13 +17,28 @@ export type BackendURL = {
   createdAt?: string;
 };
 
-async function handleResponse<T>(
-  response: Response,
-): Promise<T> {
-  const data = await response.json();
+async function handleResponse<T>(response: Response): Promise<T> {
+  const raw = await response.text();
+
+  let data: unknown = {};
+
+  try {
+    data = raw ? JSON.parse(raw) : {};
+  } catch {
+    data = { error: raw };
+  }
 
   if (!response.ok) {
-    throw new Error(data.error || "Something went wrong");
+    const errorData = data as { error?: string; message?: string };
+
+    throw Object.assign(
+      new Error(
+        errorData.error ||
+          errorData.message ||
+          "Something went wrong",
+      ),
+      { status: response.status },
+    );
   }
 
   return data as T;
@@ -184,3 +199,4 @@ export async function updateShortURLStatus(
 
   return handleResponse(response);
 }
+

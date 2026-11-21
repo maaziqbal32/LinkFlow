@@ -13,7 +13,7 @@ export default function FAQ() {
   }
 
   return (
-    <section id="faq" className="container-main py-20 sm:py-24">
+    <section id="faq" className="container-main py-8 sm:py-4">
       {/* Section heading */}
       <div
         className="mx-auto max-w-2xl text-center"

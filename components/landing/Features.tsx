@@ -2,7 +2,7 @@ import { features } from "@/data/features";
 
 export default function Features() {
   return (
-    <section id="features" className="container-main py-24">
+    <section id="features" className="container-main py-4">
       <div className="mx-auto max-w-2xl text-center" data-aos="fade-up" suppressHydrationWarning>
         <p className="text-sm font-semibold text-violet-400">
           FEATURES

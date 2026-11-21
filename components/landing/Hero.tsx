@@ -1,7 +1,92 @@
+
+"use client";
+
+import { useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowRight, BarChart3, Link2, MousePointerClick } from "lucide-react";
+import {
+  ArrowRight,
+  BarChart3,
+  Link2,
+  MousePointerClick,
+} from "lucide-react";
+
+import { createShortURL } from "@/lib/api";
 
 export default function Hero() {
+  const router = useRouter();
+
+  const [longUrl, setLongUrl] = useState("");
+  const [generatedUrl, setGeneratedUrl] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  const SHORT_URL_BASE = (
+    process.env.NEXT_PUBLIC_SHORT_URL_BASE ||
+    process.env.NEXT_PUBLIC_API_URL ||
+    "http://localhost:8001"
+  ).replace(/\/$/, "");
+
+  const handleShorten = async (
+    event: FormEvent<HTMLFormElement>,
+  ) => {
+    event.preventDefault();
+
+    const trimmedUrl = longUrl.trim();
+
+    if (!trimmedUrl) {
+      setError("Please enter a URL.");
+      return;
+    }
+
+    setIsLoading(true);
+    setError("");
+    setGeneratedUrl("");
+    setCopied(false);
+
+    try {
+      const result = await createShortURL(trimmedUrl);
+
+      if (!result.id) {
+        throw new Error("The server did not return a short URL.");
+      }
+
+      const shortUrl = `${SHORT_URL_BASE}/${result.id}`;
+
+      setGeneratedUrl(shortUrl);
+    } catch (err) {
+      const apiError = err as Error & { status?: number };
+
+      const requiresLogin =
+        apiError.status === 401 ||
+        apiError.status === 403 ||
+        /authentication|required|session/i.test(apiError.message);
+
+      if (requiresLogin) {
+        router.push("/login");
+        return;
+      }
+
+      setError(
+        apiError.message || "Unable to shorten this URL. Please try again.",
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCopy = async () => {
+    if (!generatedUrl) return;
+
+    try {
+      await navigator.clipboard.writeText(generatedUrl);
+      setCopied(true);
+    } catch {
+      setError("Unable to copy the link. Please copy it manually.");
+    }
+  };
+
   return (
     <section className="relative isolate overflow-hidden">
       {/* Background glow */}
@@ -41,6 +126,7 @@ export default function Hero() {
             >
               Shorten Links.
             </span>
+
             <span
               data-aos="fade-up"
               data-aos-delay="250"
@@ -49,6 +135,7 @@ export default function Hero() {
             >
               Track Clicks.
             </span>
+
             <span
               data-aos="fade-up"
               data-aos-delay="400"
@@ -69,33 +156,82 @@ export default function Hero() {
             manage every click with simple, actionable analytics.
           </p>
 
-          {/* URL input - UI only for now */}
+          {/* Functional URL Shortener */}
           <div
             data-aos="fade-up"
             data-aos-delay="700"
             suppressHydrationWarning
             className="mt-9 max-w-xl"
           >
-            <form className="flex flex-col gap-3 sm:flex-row">
+            <form
+              onSubmit={handleShorten}
+              className="flex flex-col gap-3 sm:flex-row"
+            >
               <label htmlFor="long-url" className="sr-only">
                 Enter your long URL
               </label>
 
               <input
                 id="long-url"
-                type="url"
+                type="text"
+                inputMode="url"
+                required
+                value={longUrl}
+                onChange={(event) => setLongUrl(event.target.value)}
                 placeholder="Paste your long URL here..."
                 className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/[0.05] px-5 py-4 text-sm text-white outline-none transition-all placeholder:text-zinc-500 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20"
               />
 
               <button
-                type="button"
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-6 py-4 text-sm font-semibold text-white shadow-lg shadow-violet-700/20 transition-all hover:-translate-y-0.5 hover:shadow-violet-600/40"
+                type="submit"
+                disabled={isLoading || !longUrl.trim()}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-6 py-4 text-sm font-semibold text-white shadow-lg shadow-violet-700/20 transition-all hover:-translate-y-0.5 hover:shadow-violet-600/40 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
               >
-                Shorten
-                <ArrowRight size={17} />
+                {isLoading ? "Shortening..." : "Shorten"}
+                {!isLoading && <ArrowRight size={17} />}
               </button>
             </form>
+
+            {/* Error message */}
+            {error && (
+              <p
+                role="alert"
+                className="mt-3 text-sm text-red-400"
+              >
+                {error}
+              </p>
+            )}
+
+            {/* Generated short URL */}
+            {generatedUrl && (
+              <div
+                aria-live="polite"
+                className="mt-4 rounded-xl border border-emerald-400/20 bg-emerald-400/5 p-4"
+              >
+                <p className="mb-2 text-sm font-medium text-emerald-400">
+                  Your short link is ready!
+                </p>
+
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                  <a
+                    href={generatedUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="min-w-0 flex-1 break-all text-sm text-white transition-colors hover:text-violet-300"
+                  >
+                    {generatedUrl}
+                  </a>
+
+                  <button
+                    type="button"
+                    onClick={handleCopy}
+                    className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-500"
+                  >
+                    {copied ? "Copied!" : "Copy Link"}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           <div
@@ -146,6 +282,7 @@ export default function Hero() {
                 <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-500/15 text-violet-300">
                   <BarChart3 size={19} />
                 </span>
+
                 <div>
                   <p className="text-sm font-semibold">Link Analytics</p>
                   <p className="text-xs text-zinc-500">Overview preview</p>
@@ -168,8 +305,11 @@ export default function Hero() {
                   <MousePointerClick size={15} />
                   <span className="text-xs">Total clicks</span>
                 </div>
+
                 <p className="text-2xl font-bold">24.8K</p>
-                <p className="mt-1 text-xs text-emerald-400">+12.8% growth</p>
+                <p className="mt-1 text-xs text-emerald-400">
+                  +12.8% growth
+                </p>
               </div>
 
               <div
@@ -182,33 +322,38 @@ export default function Hero() {
                   <Link2 size={15} />
                   <span className="text-xs">Active links</span>
                 </div>
+
                 <p className="text-2xl font-bold">1,284</p>
-                <p className="mt-1 text-xs text-violet-300">Link overview</p>
+                <p className="mt-1 text-xs text-violet-300">
+                  Link overview
+                </p>
               </div>
             </div>
 
             <div className="mt-4 rounded-xl border border-white/5 bg-white/[0.04] p-4">
               <div className="mb-6 flex items-center justify-between">
                 <p className="text-sm font-medium">Click activity</p>
-                <span className="text-xs text-zinc-500">Illustrative data</span>
+                <span className="text-xs text-zinc-500">
+                  Illustrative data
+                </span>
               </div>
 
               <div
                 className="flex h-40 items-end justify-between gap-2"
                 aria-label="Illustrative click activity bar chart"
               >
-                {[42, 65, 48, 82, 58, 95, 70, 100, 76, 88, 60, 92].map(
-                  (height, index) => (
-                    <div
-                      key={index}
-                      style={{
-                        height: `${height}%`,
-                        animationDelay: `${900 + index * 70}ms`,
-                      }}
-                      className="animate-bar w-full origin-bottom rounded-t-md bg-gradient-to-t from-violet-700 to-fuchsia-400 opacity-80 transition-opacity hover:opacity-100"
-                    />
-                  )
-                )}
+                {[
+                  42, 65, 48, 82, 58, 95, 70, 100, 76, 88, 60, 92,
+                ].map((height, index) => (
+                  <div
+                    key={index}
+                    style={{
+                      height: `${height}%`,
+                      animationDelay: `${900 + index * 70}ms`,
+                    }}
+                    className="animate-bar w-full origin-bottom rounded-t-md bg-gradient-to-t from-violet-700 to-fuchsia-400 opacity-80 transition-opacity hover:opacity-100"
+                  />
+                ))}
               </div>
 
               <div className="mt-3 flex justify-between text-[10px] text-zinc-500">
@@ -223,7 +368,7 @@ export default function Hero() {
             </div>
           </div>
 
-          {/* Floating card: AOS on the wrapper, float loop on the inner card */}
+          {/* Floating card */}
           <div
             data-aos="fade-up"
             data-aos-delay="1100"
@@ -234,6 +379,7 @@ export default function Hero() {
               <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-400/10 text-emerald-400">
                 <MousePointerClick size={20} />
               </span>
+
               <div>
                 <p className="text-xs text-zinc-400">Clicks tracked</p>
                 <p className="text-lg font-bold">Real-time</p>
